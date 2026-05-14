@@ -7,6 +7,41 @@ export const VAULT_PATH = resolve(
 	(process.env.VAULT_PATH ?? '~/Work/goflowtics-vault').replace(/^~/, homedir())
 );
 
+export const CATALOG_PATH = resolve(
+	(process.env.CATALOG_PATH ?? '~/Work/agenticos-catalog').replace(/^~/, homedir())
+);
+
+// Preload catalog skills indexed by domain slug, loaded once per process
+let _catalogSkills: Map<string, Skill[]> | null = null;
+
+function loadCatalogSkills(): Map<string, Skill[]> {
+	if (_catalogSkills) return _catalogSkills;
+	_catalogSkills = new Map();
+	const skillsDir = join(CATALOG_PATH, 'skills');
+	if (!existsSync(skillsDir)) return _catalogSkills;
+
+	for (const slug of readdirSync(skillsDir)) {
+		if (slug.startsWith('.')) continue;
+		const skillMd = join(skillsDir, slug, 'SKILL.md');
+		if (!existsSync(skillMd)) continue;
+		const raw = readFileSync(skillMd, 'utf8');
+		const fmMatch = raw.match(/^---\n([\s\S]*?)\n---/);
+		const fm = fmMatch ? (parseYaml(fmMatch[1]) as Record<string, unknown>) : {};
+		const domain = (fm.domain as string) ?? 'ops-custom';
+		if (!_catalogSkills.has(domain)) _catalogSkills.set(domain, []);
+		_catalogSkills.get(domain)!.push({
+			slug,
+			name: (fm.name as string) ?? slug,
+			description: (fm.description as string) ?? '',
+			cadence: fm.cadence as string | undefined,
+			badge: 'catalog',
+			domain,
+			promptPath: skillMd
+		});
+	}
+	return _catalogSkills;
+}
+
 export interface Tenant {
 	tenant_id: string;
 	tenant_name: string;
@@ -70,7 +105,14 @@ export function readDomains(): Domain[] {
 		const name = nameMatch?.[1] ?? slug;
 		const description = descMatch?.[1]?.trim() ?? '';
 
-		const skills = readSkillsForDomain(slug, number);
+		const tenantSkills = readSkillsForDomain(slug, number);
+		const catalog = loadCatalogSkills();
+		const catalogSkills = catalog.get(slug) ?? [];
+		// merge: catalog first, then tenant stubs (dedup by slug)
+		const skills = [
+			...catalogSkills,
+			...tenantSkills.filter(s => !catalogSkills.some(c => c.slug === s.slug))
+		];
 
 		return { number, slug, name, description, skills };
 	});
