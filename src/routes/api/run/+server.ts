@@ -3,9 +3,10 @@ import type { RequestHandler } from './$types';
 import { startRun } from '$lib/server/runner.js';
 import { readDomains } from '$lib/server/vault.js';
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
 	const body = await request.json();
 	const { skill, domain, input } = body as { skill: string; domain: string; input?: string };
+	const user = locals.user ?? 'unknown';
 
 	if (!skill || !domain) error(400, 'skill and domain required');
 
@@ -33,7 +34,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		skill,
 		domain,
 		prompt,
-		user: 'atli@goflowtics.com',
+		user,
 		input
 	});
 
