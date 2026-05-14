@@ -1,14 +1,17 @@
 <script lang="ts">
-	import { createEventDispatcher, onDestroy } from 'svelte';
-
-	let { runId, skill }: { runId: string | null; skill: string | null } = $props();
-
-	const dispatch = createEventDispatcher<{ done: void }>();
+	let {
+		runId,
+		skill,
+		ondone
+	}: {
+		runId: string | null;
+		skill: string | null;
+		ondone: () => void;
+	} = $props();
 
 	let lines = $state<string[]>([]);
 	let status = $state<'idle' | 'running' | 'done' | 'error'>('idle');
-	let es: EventSource | null = null;
-	let outputEl: HTMLDivElement;
+	let outputEl: HTMLDivElement | undefined = $state();
 
 	$effect(() => {
 		if (!runId) return;
@@ -16,33 +19,40 @@
 		lines = [];
 		status = 'running';
 
-		es?.close();
-		es = new EventSource(`/api/stream/${runId}`);
+		let stopped = false;
+		let lastCount = 0;
 
-		es.onmessage = (e) => {
-			const text: string = JSON.parse(e.data);
-			if (text === '[DONE]') {
-				status = 'done';
-				es?.close();
-				dispatch('done');
-			} else if (text === '[ERROR]') {
-				status = 'error';
-				es?.close();
-				dispatch('done');
-			} else {
-				lines.push(text);
-				// auto-scroll
-				setTimeout(() => outputEl?.scrollTo(0, outputEl.scrollHeight), 10);
+		async function poll() {
+			while (!stopped) {
+				try {
+					const res = await fetch(`/api/run-status/${runId}`);
+					const data = await res.json();
+
+					if (!data.found) {
+						status = 'error';
+						break;
+					}
+
+					// append any new lines
+					if (data.lines.length > lastCount) {
+						lines = data.lines;
+						lastCount = data.lines.length;
+						setTimeout(() => outputEl?.scrollTo(0, outputEl.scrollHeight), 10);
+					}
+
+					if (data.status === 'done') { status = 'done'; break; }
+					if (data.status === 'error') { status = 'error'; break; }
+				} catch {
+					status = 'error';
+					break;
+				}
+				await new Promise(r => setTimeout(r, 500));
 			}
-		};
+		}
 
-		es.onerror = () => {
-			status = 'error';
-			es?.close();
-		};
+		poll();
+		return () => { stopped = true; };
 	});
-
-	onDestroy(() => es?.close());
 </script>
 
 <div class="card space-y-3">

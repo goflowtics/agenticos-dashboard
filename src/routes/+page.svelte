@@ -9,9 +9,10 @@
 	let activeRunId = $state<string | null>(null);
 	let activeSkill = $state<string | null>(null);
 
-	async function handleRun(event: CustomEvent<{ skill: string; domain: string; input?: string }>) {
-		const { skill, domain, input } = event.detail;
+	async function handleRun(detail: { skill: string; domain: string; input?: string }) {
+		const { skill, domain, input } = detail;
 		activeSkill = skill;
+		activeRunId = null; // reset first so $effect re-fires even if same skill runs twice
 
 		const res = await fetch('/api/run', {
 			method: 'POST',
@@ -22,18 +23,11 @@
 		activeRunId = runId;
 	}
 
-	function handleRunDone() {
-		activeRunId = null;
-		activeSkill = null;
-	}
-
-	const now = new Date();
-	const timestamp = now.toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+	const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
 </script>
 
 <div class="min-h-screen" style="background: var(--bg);">
 
-	<!-- Header -->
 	<header style="background: var(--bg-card); box-shadow: 0 0 0 1px var(--ring-soft);">
 		<div class="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-3">
@@ -55,7 +49,6 @@
 
 	<main class="max-w-[1600px] mx-auto px-6 py-6 space-y-6">
 
-		<!-- Tenant strip -->
 		<div class="card flex items-center gap-6 py-2">
 			<div>
 				<div class="label">Tenant</div>
@@ -79,12 +72,10 @@
 			</div>
 		</div>
 
-		<!-- Skills grid -->
-		<SkillsGrid domains={data.domains} on:run={handleRun} />
+		<SkillsGrid domains={data.domains} onrun={handleRun} />
 
-		<!-- Bottom row: run panel + recent runs -->
 		<div class="grid grid-cols-2 gap-4">
-			<RunPanel runId={activeRunId} skill={activeSkill} on:done={handleRunDone} />
+			<RunPanel runId={activeRunId} skill={activeSkill} ondone={() => {}} />
 			<RecentRuns runs={data.recentRuns} />
 		</div>
 

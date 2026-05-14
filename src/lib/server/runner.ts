@@ -54,7 +54,7 @@ export function startRun(opts: RunOptions): string {
 		? `${opts.prompt}\n\nUser input: ${opts.input}`
 		: opts.prompt;
 
-	const proc = spawn('claude', ['-p', prompt, '--output-format', 'text'], {
+	const proc = spawn('claude', ['-p', prompt, '--output-format', 'text', '--dangerously-skip-permissions'], {
 		cwd: VAULT_PATH,
 		env: { ...process.env },
 		stdio: ['ignore', 'pipe', 'pipe']

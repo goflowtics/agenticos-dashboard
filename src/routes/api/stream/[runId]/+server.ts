@@ -3,38 +3,57 @@ import { getActiveRun } from '$lib/server/runner.js';
 
 export const GET: RequestHandler = ({ params }) => {
 	const { runId } = params;
+	let poll: ReturnType<typeof setInterval> | null = null;
+	let closed = false;
 
 	const stream = new ReadableStream({
 		start(controller) {
 			let lastIndex = 0;
 
 			const send = (data: string) => {
-				controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`));
+				if (closed) return;
+				try {
+					controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(data)}\n\n`));
+				} catch {
+					closed = true;
+					if (poll) clearInterval(poll);
+				}
 			};
 
-			const poll = setInterval(() => {
-				const run = getActiveRun(runId);
-				if (!run) {
-					send('[run not found]');
-					controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
-					clearInterval(poll);
-					controller.close();
+			const close = () => {
+				if (closed) return;
+				closed = true;
+				if (poll) clearInterval(poll);
+				try { controller.close(); } catch { /* already closed */ }
+			};
+
+			poll = setInterval(() => {
+				if (closed) {
+					if (poll) clearInterval(poll);
 					return;
 				}
 
-				// send any new lines
+				const run = getActiveRun(runId);
+				if (!run) {
+					send('[run not found]');
+					close();
+					return;
+				}
+
 				while (lastIndex < run.lines.length) {
 					send(run.lines[lastIndex]);
 					lastIndex++;
 				}
 
 				if (run.status === 'done' || run.status === 'error') {
-					const msg = run.status === 'done' ? '[DONE]' : '[ERROR]';
-					controller.enqueue(new TextEncoder().encode(`data: ${msg}\n\n`));
-					clearInterval(poll);
-					controller.close();
+					send(run.status === 'done' ? '[DONE]' : '[ERROR]');
+					close();
 				}
 			}, 200);
+		},
+		cancel() {
+			closed = true;
+			if (poll) clearInterval(poll);
 		}
 	});
 
