@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import SkillsGrid from '$lib/components/SkillsGrid.svelte';
 	import RunPanel from '$lib/components/RunPanel.svelte';
@@ -75,7 +76,7 @@
 		<SkillsGrid domains={data.domains} onrun={handleRun} />
 
 		<div class="grid grid-cols-2 gap-4">
-			<RunPanel runId={activeRunId} skill={activeSkill} ondone={() => {}} />
+			<RunPanel runId={activeRunId} skill={activeSkill} ondone={() => invalidateAll()} />
 			<RecentRuns runs={data.recentRuns} />
 		</div>
 

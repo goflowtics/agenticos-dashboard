@@ -33,14 +33,13 @@
 						break;
 					}
 
-					// append any new lines
 					if (data.lines.length > lastCount) {
 						lines = data.lines;
 						lastCount = data.lines.length;
 						setTimeout(() => outputEl?.scrollTo(0, outputEl.scrollHeight), 10);
 					}
 
-					if (data.status === 'done') { status = 'done'; break; }
+					if (data.status === 'done') { status = 'done'; ondone(); break; }
 					if (data.status === 'error') { status = 'error'; break; }
 				} catch {
 					status = 'error';
@@ -77,6 +76,8 @@
 	>
 		{#if status === 'idle'}
 			<span style="color: var(--text-dim);">No active run. Click a skill button to start.</span>
+		{:else if status === 'running' && lines.length === 0}
+			<span style="color: var(--text-dim);">Running <span class="opacity-60">▋</span></span>
 		{:else}
 			{#each lines as line}
 				{line}
