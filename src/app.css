@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+	--bg: #0e0f10;
+	--bg-card: #1c1b19;
+	--bg-hover: #252422;
+	--ring-soft: rgba(255,255,255,0.08);
+	--ring-accent: rgba(201,96,66,0.4);
+	--accent: #c96042;
+	--accent-dim: #8b4230;
+	--text: #e8e4dc;
+	--text-muted: #7a766e;
+	--text-dim: #4a4640;
+	--green: #4a9e6a;
+	--amber: #c4923a;
+	--red: #b84040;
+	--catalog-badge: #2a3a2e;
+	--catalog-text: #4a9e6a;
+	--tenant-badge: #2a2a3e;
+	--tenant-text: #6a7abd;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html, body {
+	background: var(--bg);
+	color: var(--text);
+	font-family: 'JetBrains Mono', 'Fira Mono', 'Cascadia Code', monospace;
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 0;
+	padding: 0;
+	min-height: 100vh;
+}
+
+/* Cards */
+.card {
+	background: var(--bg-card);
+	box-shadow: 0 0 0 1px var(--ring-soft);
+	border-radius: 2px;
+	padding: 1rem;
+}
+
+/* Buttons */
+.btn {
+	font-family: inherit;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	background: var(--bg-card);
+	color: var(--text);
+	box-shadow: 0 0 0 1px var(--ring-soft);
+	border: none;
+	border-radius: 2px;
+	padding: 0.4rem 0.75rem;
+	cursor: pointer;
+	transition: background 0.1s, box-shadow 0.1s;
+}
+
+.btn:hover {
+	background: var(--bg-hover);
+	box-shadow: 0 0 0 1px var(--ring-accent);
+}
+
+.btn-accent {
+	background: var(--accent-dim);
+	box-shadow: 0 0 0 1px var(--accent);
+}
+
+.btn-accent:hover {
+	background: var(--accent);
+}
+
+/* Labels */
+.label {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+/* Badges */
+.badge {
+	font-size: 9px;
+	font-weight: 700;
+	letter-spacing: 0.10em;
+	text-transform: uppercase;
+	border-radius: 2px;
+	padding: 1px 5px;
+}
+
+.badge-catalog {
+	background: var(--catalog-badge);
+	color: var(--catalog-text);
+}
+
+.badge-tenant {
+	background: var(--tenant-badge);
+	color: var(--tenant-text);
+}
+
+.badge-stub {
+	background: #2a2a2a;
+	color: var(--text-dim);
+}
+
+/* Pulse dot */
+@keyframes pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.3; }
+}
+
+.pulse-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--green);
+	animation: pulse 2s ease-in-out infinite;
+	display: inline-block;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 2px; }
