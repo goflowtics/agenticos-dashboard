@@ -23,9 +23,10 @@ $SSH "${REMOTE_USER}@${REMOTE_HOST}" "mkdir -p $REMOTE_DIR"
 log "Rsyncing build/..."
 rsync -avz --delete -e "ssh -i $SSH_KEY" build/ "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/build/"
 
-log "Rsyncing configs..."
+log "Rsyncing configs + package files..."
 rsync -avz -e "ssh -i $SSH_KEY" \
     package.json \
+    package-lock.json \
     ecosystem.godfinns.config.cjs \
     deploy/nginx-os.flexmedia.is.conf \
     "${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR}/"
@@ -35,11 +36,17 @@ log "Running remote setup..."
 $SSH "${REMOTE_USER}@${REMOTE_HOST}" bash <<'ENDSSH'
 set -euo pipefail
 
+# pm2 may live in ~/.npm-global/bin
+export PATH="$PATH:/home/godfinns/.npm-global/bin"
+
 # install pm2 globally if missing
 if ! command -v pm2 &>/dev/null; then
     echo "  installing pm2..."
     npm install -g pm2
 fi
+
+cd /home/godfinns/Work/agenticos-dashboard
+npm ci --production --silent
 
 # install nginx if missing
 if ! command -v nginx &>/dev/null; then
