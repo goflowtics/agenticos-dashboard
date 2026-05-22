@@ -1,9 +1,10 @@
 <script lang="ts">
+	import '../app.css';
 	let { children } = $props();
 </script>
 
 <svelte:head>
-	<title>AgenticOS</title>
+	<title>GoFlowtics OS</title>
 </svelte:head>
 
 {@render children()}
