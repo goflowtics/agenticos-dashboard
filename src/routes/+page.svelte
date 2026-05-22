@@ -1,19 +1,36 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
-	import SkillsGrid from '$lib/components/SkillsGrid.svelte';
+	import StatCards from '$lib/components/StatCards.svelte';
+	import ActivityChart from '$lib/components/ActivityChart.svelte';
+	import IntegrationsStrip from '$lib/components/IntegrationsStrip.svelte';
+	import SkillBrowser from '$lib/components/SkillBrowser.svelte';
+	import SkillRunner from '$lib/components/SkillRunner.svelte';
 	import RunPanel from '$lib/components/RunPanel.svelte';
 	import RecentRuns from '$lib/components/RecentRuns.svelte';
+	import VaultPulse from '$lib/components/VaultPulse.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	let activeRunId = $state<string | null>(null);
 	let activeSkill = $state<string | null>(null);
+	let activeTab = $state<string>('Claude Code');
+
+	const tabs = ['Claude Code', 'Vault', 'Daily Note', 'Runs', 'Drafts'];
+
+	const totalSkills = $derived(data.domains.reduce((n, d) => n + d.skills.length, 0));
+
+	const timestamp = new Date().toLocaleTimeString('en', {
+		hour: '2-digit', minute: '2-digit', hour12: false
+	});
+	const dateStr = new Date().toLocaleDateString('en', {
+		weekday: 'short', month: 'short', day: 'numeric'
+	});
 
 	async function handleRun(detail: { skill: string; domain: string; input?: string }) {
 		const { skill, domain, input } = detail;
 		activeSkill = skill;
-		activeRunId = null; // reset first so $effect re-fires even if same skill runs twice
+		activeRunId = null;
 
 		const res = await fetch('/api/run', {
 			method: 'POST',
@@ -24,60 +41,103 @@
 		activeRunId = runId;
 	}
 
-	const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+	function handleClear() {
+		activeRunId = null;
+		activeSkill = null;
+	}
 </script>
 
-<div class="min-h-screen" style="background: var(--bg);">
+<svelte:head>
+	<title>GoFlowtics OS</title>
+</svelte:head>
 
+<div style="background: var(--bg); min-height: 100vh;">
+
+	<!-- Header -->
 	<header style="background: var(--bg-card); box-shadow: 0 0 0 1px var(--ring-soft);">
-		<div class="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
+		<div class="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-3">
-				<span class="text-base font-bold tracking-widest uppercase">
-					AGENTIC <span style="color: var(--accent);">OS</span>
-				</span>
-				<span class="label">/ {data.tenant.tenant_name}</span>
+				<span
+					class="font-display text-lg font-bold"
+					style="color: var(--accent); font-family: 'Space Grotesk', system-ui, sans-serif; letter-spacing: -0.01em;"
+				>GoFlowtics OS</span>
+				<span style="color: var(--text-dim); font-size: 12px;">/</span>
+				<span style="color: var(--text-muted); font-size: 12px;">{data.tenant.tenant_name}</span>
 			</div>
-			<div class="flex items-center gap-4">
+			<div class="flex items-center gap-3">
 				<span class="pulse-dot"></span>
-				<span class="label tracking-wider">SYSTEM · LIVE</span>
-				<span class="label">|</span>
-				<span class="label">{data.tenant.plan.toUpperCase()}</span>
-				<span class="label">|</span>
-				<span class="label">{timestamp}</span>
+				<span class="label">System · Live</span>
+				<span class="label" style="color: var(--text-dim);">|</span>
+				<span class="label">{dateStr} · {timestamp}</span>
 			</div>
 		</div>
 	</header>
 
-	<main class="max-w-[1600px] mx-auto px-6 py-6 space-y-6">
-
-		<div class="card flex items-center gap-6 py-2">
-			<div>
-				<div class="label">Tenant</div>
-				<div class="text-sm font-medium">{data.tenant.tenant_id}</div>
-			</div>
-			<div>
-				<div class="label">Catalog</div>
-				<div class="text-sm font-medium">{data.tenant.catalog.subscribed}</div>
-			</div>
-			<div>
-				<div class="label">Region</div>
-				<div class="text-sm font-medium">{data.tenant.region.toUpperCase()}</div>
-			</div>
-			<div>
-				<div class="label">Users</div>
-				<div class="text-sm font-medium">{data.tenant.users.map(u => u.email).join(', ')}</div>
-			</div>
-			<div class="ml-auto">
-				<div class="label">Domains</div>
-				<div class="text-sm font-medium">{data.domains.length} / 9</div>
-			</div>
+	<!-- Tab strip -->
+	<div style="background: var(--bg-card); box-shadow: 0 0 0 1px var(--ring-soft); margin-top: 1px;">
+		<div class="max-w-[1400px] mx-auto px-6 flex gap-0">
+			{#each tabs as tab}
+				<button
+					style="
+						border: none;
+						background: transparent;
+						cursor: pointer;
+						padding: 0.6rem 1rem;
+						border-bottom: 2px solid {activeTab === tab ? 'var(--accent)' : 'transparent'};
+						color: {activeTab === tab ? 'var(--accent)' : 'var(--text-muted)'};
+						font-family: 'Inter', system-ui, sans-serif;
+						font-size: 11px;
+						font-weight: 600;
+						letter-spacing: 0.03em;
+						transition: color 0.1s, border-color 0.1s;
+					"
+					onclick={() => (activeTab = tab)}
+				>{tab}</button>
+			{/each}
 		</div>
+	</div>
 
-		<SkillsGrid domains={data.domains} onrun={handleRun} />
+	<main class="max-w-[1400px] mx-auto px-6 py-6 space-y-4">
 
-		<div class="grid grid-cols-2 gap-4">
-			<RunPanel runId={activeRunId} skill={activeSkill} ondone={() => invalidateAll()} />
-			<RecentRuns runs={data.recentRuns} />
+		<!-- Stat cards -->
+		<StatCards skillsBuilt={data.skillsBuilt} {totalSkills} />
+
+		<!-- Activity chart -->
+		<ActivityChart data={data.runsPerDay} />
+
+		<!-- Integrations strip -->
+		<IntegrationsStrip integrations={data.integrations} />
+
+		<!-- Two-column main area -->
+		<div class="grid gap-4" style="grid-template-columns: 1fr 340px;">
+
+			<!-- Left: Runner + Skill Browser + Run output -->
+			<div class="space-y-4">
+				<SkillRunner {activeSkill} onrun={handleRun} onclear={handleClear} />
+				<SkillBrowser domains={data.domains} onrun={handleRun} />
+				<RunPanel runId={activeRunId} skill={activeSkill} ondone={() => invalidateAll()} />
+			</div>
+
+			<!-- Right rail -->
+			<div class="space-y-4">
+				<RecentRuns runs={data.recentRuns} />
+				<VaultPulse runs={data.recentRuns} />
+				<div class="card space-y-2">
+					<div class="label">Tenant</div>
+					<div class="space-y-1.5">
+						{#each [
+							['Plan', data.tenant.plan],
+							['Region', data.tenant.region.toUpperCase() + ' (EEA)'],
+							['Catalog', data.tenant.catalog.subscribed],
+						] as [k, v]}
+							<div class="flex justify-between" style="font-size: 11px;">
+								<span style="color: var(--text-muted);">{k}</span>
+								<span style="font-weight: 500;">{v}</span>
+							</div>
+						{/each}
+					</div>
+				</div>
+			</div>
 		</div>
 
 	</main>
