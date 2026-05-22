@@ -1,94 +1,107 @@
 <script lang="ts">
 	import type { ActionData } from './$types';
 	let { form }: { form: ActionData } = $props();
+
+	function focusInput(e: FocusEvent) {
+		(e.currentTarget as HTMLInputElement).style.boxShadow = '0 0 0 1.5px var(--accent)';
+	}
+	function blurInput(e: FocusEvent) {
+		(e.currentTarget as HTMLInputElement).style.boxShadow = '0 0 0 1px var(--ring-soft)';
+	}
+	function hoverBtn(e: MouseEvent) {
+		(e.currentTarget as HTMLButtonElement).style.background = 'var(--accent-dim)';
+	}
+	function unhoverBtn(e: MouseEvent) {
+		(e.currentTarget as HTMLButtonElement).style.background = 'var(--accent)';
+	}
 </script>
 
-<svelte:head><title>AgenticOS — Sign in</title></svelte:head>
+<svelte:head><title>GoFlowtics OS — Sign in</title></svelte:head>
 
-<div class="login-wrap">
-	<div class="login-card">
-		<div class="brand">AGENTIC<span class="accent">OS</span></div>
-		<div class="label">SIGN IN</div>
+<div style="
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg);
+">
+	<div style="
+		width: 360px;
+		padding: 2.5rem;
+		background: var(--bg-card);
+		box-shadow: 0 0 0 1px var(--ring-soft);
+		border-radius: 3px;
+	">
+		<div style="margin-bottom: 0.25rem;">
+			<span style="
+				font-family: 'Space Grotesk', system-ui, sans-serif;
+				font-size: 1.25rem;
+				font-weight: 700;
+				color: var(--accent);
+				letter-spacing: -0.01em;
+			">GoFlowtics OS</span>
+		</div>
+		<div class="label" style="margin-bottom: 2rem;">Sign in to your workspace</div>
 
 		{#if form?.sent}
-			<p class="sent">Check your inbox — link valid for 15 min.</p>
+			<div style="
+				background: var(--accent-light);
+				box-shadow: 0 0 0 1px var(--ring-accent);
+				border-radius: 3px;
+				padding: 0.9rem 1rem;
+				font-size: 0.8rem;
+				color: var(--accent-dim);
+				line-height: 1.5;
+			">
+				Magic link sent — check your inbox.<br/>
+				<span style="color: var(--text-dim); font-size: 0.75rem;">Valid for 15 minutes.</span>
+			</div>
 		{:else}
-			<form method="POST">
+			<form method="POST" style="display: flex; flex-direction: column; gap: 0.75rem;">
 				<input
 					type="email"
 					name="email"
 					placeholder="your@email.com"
 					autocomplete="email"
 					required
+					style="
+						background: var(--bg);
+						border: none;
+						box-shadow: 0 0 0 1px var(--ring-soft);
+						border-radius: 3px;
+						padding: 0.65rem 0.85rem;
+						color: var(--text);
+						font-family: 'Inter', system-ui, sans-serif;
+						font-size: 0.85rem;
+						outline: none;
+						width: 100%;
+					"
+					onfocus={focusInput}
+					onblur={blurInput}
 				/>
 				{#if form?.error}
-					<p class="err">{form.error}</p>
+					<p style="color: var(--red); font-size: 0.78rem; margin: 0;">{form.error}</p>
 				{/if}
-				<button type="submit">SEND LINK</button>
+				<button
+					type="submit"
+					style="
+						background: var(--accent);
+						color: #fff;
+						border: none;
+						border-radius: 3px;
+						padding: 0.65rem;
+						font-family: 'Inter', system-ui, sans-serif;
+						font-size: 0.78rem;
+						font-weight: 600;
+						letter-spacing: 0.06em;
+						text-transform: uppercase;
+						cursor: pointer;
+						transition: background 0.1s;
+					"
+					onmouseover={hoverBtn}
+					onmouseout={unhoverBtn}
+				>Send magic link</button>
 			</form>
 		{/if}
 	</div>
 </div>
-
-<style>
-	:global(body) {
-		margin: 0;
-		background: #0e0f10;
-		font-family: 'JetBrains Mono', 'Fira Mono', monospace;
-		color: #e8e6e1;
-	}
-	.login-wrap {
-		min-height: 100vh;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-	.login-card {
-		width: 340px;
-		padding: 2rem;
-		background: #1c1b19;
-		box-shadow: 0 0 0 1px #2a2825;
-		border-radius: 3px;
-	}
-	.brand {
-		font-size: 1.1rem;
-		letter-spacing: 0.12em;
-		font-weight: 700;
-		margin-bottom: 0.25rem;
-	}
-	.accent { color: #c96042; }
-	.label {
-		font-size: 0.65rem;
-		letter-spacing: 0.18em;
-		color: #6b6660;
-		margin-bottom: 1.75rem;
-	}
-	form { display: flex; flex-direction: column; gap: 0.75rem; }
-	input {
-		background: #0e0f10;
-		border: none;
-		box-shadow: 0 0 0 1px #2a2825;
-		border-radius: 2px;
-		padding: 0.6rem 0.75rem;
-		color: #e8e6e1;
-		font-family: inherit;
-		font-size: 0.8rem;
-		outline: none;
-	}
-	input:focus { box-shadow: 0 0 0 1px #c96042; }
-	button {
-		background: #c96042;
-		color: #0e0f10;
-		border: none;
-		border-radius: 2px;
-		padding: 0.6rem;
-		font-family: inherit;
-		font-size: 0.75rem;
-		font-weight: 700;
-		letter-spacing: 0.1em;
-		cursor: pointer;
-	}
-	button:hover { background: #d97052; }
-	.err { color: #c96042; font-size: 0.75rem; margin: 0; }
-	.sent { color: #8dba6e; font-size: 0.8rem; margin: 0; line-height: 1.5; }
-</style>
