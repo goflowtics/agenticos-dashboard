@@ -81,6 +81,21 @@ export interface RunRecord {
 	prev_hash?: string;
 }
 
+export interface DayCount {
+	date: string; // YYYY-MM-DD
+	count: number;
+}
+
+export interface Integration {
+	key: string;
+	label: string;
+	active: boolean;
+}
+
+export type TenantRaw = Tenant & {
+	integrations?: Record<string, boolean | unknown[]>;
+};
+
 export function readTenant(): Tenant {
 	const p = join(VAULT_PATH, 'AgenticOS', 'tenant.yaml');
 	if (!existsSync(p)) throw new Error(`tenant.yaml not found at ${p}`);
@@ -160,6 +175,67 @@ function readSkillsForDomain(domainSlug: string, domainNumber: number): Skill[] 
 	}
 
 	return skills;
+}
+
+export function readIntegrations(): Integration[] {
+	const p = join(VAULT_PATH, 'AgenticOS', 'tenant.yaml');
+	if (!existsSync(p)) return [];
+	const raw = parseYaml(readFileSync(p, 'utf8')) as TenantRaw;
+	const intg = raw.integrations ?? {};
+	const labels: Record<string, string> = {
+		notion: 'Notion',
+		github: 'GitHub',
+		gmail: 'Gmail',
+		google_calendar: 'Calendar',
+		google_drive: 'Drive',
+		anthropic_api: 'Anthropic',
+	};
+	// always show these in a fixed order
+	const keys = ['notion', 'anthropic_api', 'gmail', 'google_calendar', 'google_drive', 'github'];
+	return keys.map(key => ({
+		key,
+		label: labels[key] ?? key,
+		active: Array.isArray(intg[key]) ? (intg[key] as unknown[]).length > 0 : Boolean(intg[key]),
+	}));
+}
+
+export function countBuiltSkills(): number {
+	const skillsDir = join(VAULT_PATH, 'AgenticOS', '.claude', 'skills');
+	if (!existsSync(skillsDir)) return 0;
+	let count = 0;
+	for (const domain of readdirSync(skillsDir)) {
+		if (domain.startsWith('.')) continue;
+		const domainDir = join(skillsDir, domain);
+		for (const slug of readdirSync(domainDir)) {
+			if (slug.startsWith('.')) continue;
+			if (existsSync(join(domainDir, slug, 'SKILL.md'))) count++;
+		}
+	}
+	return count;
+}
+
+export function readRunsPerDay(days = 7): DayCount[] {
+	const runsDir = join(VAULT_PATH, 'AgenticOS', 'runs');
+	const counts = new Map<string, number>();
+	const now = new Date();
+	for (let i = days - 1; i >= 0; i--) {
+		const d = new Date(now);
+		d.setDate(d.getDate() - i);
+		counts.set(d.toISOString().slice(0, 10), 0);
+	}
+	if (!existsSync(runsDir)) return [...counts.entries()].map(([date, count]) => ({ date, count }));
+
+	for (const f of readdirSync(runsDir).filter(f => f.endsWith('.jsonl'))) {
+		for (const line of readFileSync(join(runsDir, f), 'utf8').split('\n').filter(Boolean)) {
+			try {
+				const r = JSON.parse(line) as RunRecord;
+				if (r.action !== 'skill.run.start') continue;
+				const date = r.ts.slice(0, 10);
+				if (counts.has(date)) counts.set(date, (counts.get(date) ?? 0) + 1);
+			} catch { /* skip */ }
+		}
+	}
+	return [...counts.entries()].map(([date, count]) => ({ date, count }));
 }
 
 export function readRecentRuns(limit = 20): RunRecord[] {

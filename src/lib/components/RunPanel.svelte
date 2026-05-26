@@ -28,19 +28,15 @@
 					const res = await fetch(`/api/run-status/${runId}`);
 					const data = await res.json();
 
-					if (!data.found) {
-						status = 'error';
-						break;
-					}
+					if (!data.found) { status = 'error'; break; }
 
-					// append any new lines
 					if (data.lines.length > lastCount) {
 						lines = data.lines;
 						lastCount = data.lines.length;
 						setTimeout(() => outputEl?.scrollTo(0, outputEl.scrollHeight), 10);
 					}
 
-					if (data.status === 'done') { status = 'done'; break; }
+					if (data.status === 'done') { status = 'done'; ondone(); break; }
 					if (data.status === 'error') { status = 'error'; break; }
 				} catch {
 					status = 'error';
@@ -57,33 +53,48 @@
 
 <div class="card space-y-3">
 	<div class="flex items-center justify-between">
-		<div class="label">ACTIVE RUN</div>
-		{#if status === 'running'}
-			<div class="flex items-center gap-2">
+		<div class="flex items-center gap-2">
+			{#if status === 'running'}
 				<span class="pulse-dot"></span>
-				<span class="label text-[9px]">{skill ?? '…'}</span>
+			{/if}
+			<div class="label">
+				{#if status === 'running'}
+					Running — <span style="color: var(--accent);">{skill ?? '…'}</span>
+				{:else if status === 'done'}
+					Run Complete
+				{:else if status === 'error'}
+					Run Error
+				{:else}
+					Active Run
+				{/if}
 			</div>
-		{:else if status === 'done'}
-			<span class="badge badge-catalog">DONE</span>
+		</div>
+		{#if status === 'done'}
+			<span class="badge badge-catalog">Done</span>
 		{:else if status === 'error'}
-			<span class="badge" style="background: #3a1a1a; color: var(--red);">ERROR</span>
+			<span class="badge" style="background: #FEE2E2; color: var(--red);">Error</span>
 		{/if}
 	</div>
 
 	<div
 		bind:this={outputEl}
-		class="rounded-sm p-3 text-[11px] leading-relaxed overflow-y-auto whitespace-pre-wrap"
-		style="background: var(--bg); box-shadow: 0 0 0 1px var(--ring-soft); min-height: 240px; max-height: 400px; color: var(--text-muted); font-family: inherit;"
+		class="rounded p-3 overflow-y-auto whitespace-pre-wrap font-mono"
+		style="
+			background: var(--bg);
+			box-shadow: 0 0 0 1px var(--ring-soft);
+			min-height: 200px;
+			max-height: 420px;
+			color: var(--text-muted);
+			font-size: 11px;
+			line-height: 1.6;
+		"
 	>
 		{#if status === 'idle'}
-			<span style="color: var(--text-dim);">No active run. Click a skill button to start.</span>
+			<span style="color: var(--text-dim);">Click a skill to run it, or type in the runner above.</span>
+		{:else if status === 'running' && lines.length === 0}
+			<span style="color: var(--text-dim);">Initialising <span style="opacity: 0.5;">▋</span></span>
 		{:else}
-			{#each lines as line}
-				{line}
-			{/each}
-			{#if status === 'running'}
-				<span class="opacity-60">▋</span>
-			{/if}
+			{#each lines as line}{line}{"\n"}{/each}{#if status === 'running'}<span style="opacity: 0.5;">▋</span>{/if}
 		{/if}
 	</div>
 </div>
