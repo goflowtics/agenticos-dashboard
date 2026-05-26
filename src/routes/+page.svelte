@@ -18,6 +18,25 @@
 
 	const tabs = ['Claude Code', 'Vault', 'Daily Note', 'Runs', 'Drafts'];
 
+	// Daily Note tab — fetched on demand, cached per session
+	let dailyNote = $state<{ content: string | null; date: string; username: string; path: string } | null>(null);
+	let dailyNoteLoading = $state(false);
+
+	async function loadDailyNote() {
+		if (dailyNote) return;
+		dailyNoteLoading = true;
+		try {
+			const res = await fetch('/api/daily-note');
+			dailyNote = await res.json();
+		} finally {
+			dailyNoteLoading = false;
+		}
+	}
+
+	$effect(() => {
+		if (activeTab === 'Daily Note') loadDailyNote();
+	});
+
 	const totalSkills = $derived(data.domains.reduce((n, d) => n + d.skills.length, 0));
 
 	const timestamp = new Date().toLocaleTimeString('en', {
@@ -37,6 +56,10 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ skill, domain, input })
 		});
+		if (res.status === 401) {
+			window.location.href = '/auth/login';
+			return;
+		}
 		const { runId } = await res.json();
 		activeRunId = runId;
 	}
@@ -99,26 +122,19 @@
 
 	<main class="max-w-[1400px] mx-auto px-6 py-6 space-y-4">
 
-		<!-- Stat cards -->
+		<!-- Always-visible summary row -->
 		<StatCards skillsBuilt={data.skillsBuilt} {totalSkills} />
-
-		<!-- Activity chart -->
 		<ActivityChart data={data.runsPerDay} />
-
-		<!-- Integrations strip -->
 		<IntegrationsStrip integrations={data.integrations} />
 
-		<!-- Two-column main area -->
+		<!-- ── Claude Code tab (default) ── -->
+		{#if activeTab === 'Claude Code'}
 		<div class="grid gap-4" style="grid-template-columns: 1fr 340px;">
-
-			<!-- Left: Runner + Skill Browser + Run output -->
 			<div class="space-y-4">
 				<SkillRunner {activeSkill} onrun={handleRun} onclear={handleClear} />
 				<SkillBrowser domains={data.domains} onrun={handleRun} />
 				<RunPanel runId={activeRunId} skill={activeSkill} ondone={() => invalidateAll()} />
 			</div>
-
-			<!-- Right rail -->
 			<div class="space-y-4">
 				<RecentRuns runs={data.recentRuns} />
 				<VaultPulse runs={data.recentRuns} />
@@ -139,6 +155,79 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- ── Daily Note tab ── -->
+		{:else if activeTab === 'Daily Note'}
+		<div class="card" style="max-width: 860px;">
+			{#if dailyNoteLoading}
+				<div style="color: var(--text-muted); font-size: 12px; padding: 1rem 0;">Loading…</div>
+			{:else if dailyNote?.content}
+				<div class="flex items-center justify-between" style="margin-bottom: 1rem;">
+					<div class="label">{dailyNote.date} · {dailyNote.username}</div>
+					<div style="color: var(--text-dim); font-size: 10px; font-family: monospace;">{dailyNote.path}</div>
+				</div>
+				<pre style="
+					white-space: pre-wrap;
+					word-break: break-word;
+					font-family: 'Inter', system-ui, sans-serif;
+					font-size: 12px;
+					line-height: 1.7;
+					color: var(--text);
+					margin: 0;
+				">{dailyNote.content}</pre>
+			{:else}
+				<div style="color: var(--text-muted); font-size: 12px; padding: 1rem 0;">
+					No daily note yet for today ({dailyNote?.date ?? '…'}).<br>
+					Run <code style="background: var(--bg); padding: 1px 4px; border-radius: 2px;">/morning-brief</code> to create one.
+				</div>
+			{/if}
+		</div>
+
+		<!-- ── Runs tab ── -->
+		{:else if activeTab === 'Runs'}
+		<div class="grid gap-4" style="grid-template-columns: 1fr 340px;">
+			<div class="card space-y-3">
+				<div class="label">Run history</div>
+				{#if data.recentRuns.length === 0}
+					<div style="color: var(--text-muted); font-size: 12px;">No runs yet.</div>
+				{:else}
+					{#each data.recentRuns.filter(r => r.action === 'skill.run.end' || r.action === 'skill.run.start') as run}
+						<div style="
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							padding: 0.5rem 0;
+							border-bottom: 1px solid var(--ring-soft);
+							font-size: 11px;
+						">
+							<div class="space-y-0.5">
+								<div style="font-weight: 600; color: var(--text);">{run.skill}</div>
+								<div style="color: var(--text-muted);">{run.user} · {new Date(run.ts).toLocaleString()}</div>
+							</div>
+							<div style="
+								padding: 2px 7px;
+								border-radius: 2px;
+								font-size: 10px;
+								font-weight: 600;
+								background: {run.status === 'done' ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : run.action === 'skill.run.start' ? 'color-mix(in srgb, #f59e0b 12%, transparent)' : 'color-mix(in srgb, #ef4444 12%, transparent)'};
+								color: {run.status === 'done' ? 'var(--accent)' : run.action === 'skill.run.start' ? '#d97706' : '#dc2626'};
+							">
+								{run.status ?? (run.action === 'skill.run.start' ? 'running' : '—')}
+							</div>
+						</div>
+					{/each}
+				{/if}
+			</div>
+			<VaultPulse runs={data.recentRuns} />
+		</div>
+
+		<!-- ── Vault / Drafts tabs (placeholder) ── -->
+		{:else}
+		<div class="card" style="max-width: 500px;">
+			<div class="label" style="margin-bottom: 0.5rem;">{activeTab}</div>
+			<div style="color: var(--text-muted); font-size: 12px;">Coming in v1.5.</div>
+		</div>
+		{/if}
 
 	</main>
 </div>

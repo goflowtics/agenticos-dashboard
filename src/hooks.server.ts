@@ -18,6 +18,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const user = cookie ? validateSession(cookie) : null;
 
 	if (!user) {
+		if (event.url.pathname.startsWith('/api/')) {
+			return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+				status: 401,
+				headers: { 'Content-Type': 'application/json' }
+			});
+		}
 		throw redirect(302, '/auth/login');
 	}
 
