@@ -9,6 +9,7 @@
 	import RunPanel from '$lib/components/RunPanel.svelte';
 	import RecentRuns from '$lib/components/RecentRuns.svelte';
 	import VaultPulse from '$lib/components/VaultPulse.svelte';
+	import VaultBrowser from '$lib/components/VaultBrowser.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -221,7 +222,11 @@
 			<VaultPulse runs={data.recentRuns} />
 		</div>
 
-		<!-- ── Vault / Drafts tabs (placeholder) ── -->
+		<!-- ── Vault tab ── -->
+		{:else if activeTab === 'Vault'}
+		<VaultBrowser />
+
+		<!-- ── Drafts tab (placeholder) ── -->
 		{:else}
 		<div class="card" style="max-width: 500px;">
 			<div class="label" style="margin-bottom: 0.5rem;">{activeTab}</div>
